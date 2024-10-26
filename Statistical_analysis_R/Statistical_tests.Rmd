@@ -1,0 +1,739 @@
+---
+title: "Statistics for The initial progression of physical and perceptual symptoms associated with aniseikonia"
+author: "Iona McLean"
+date: "2023-9-12"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list = ls()) #clear global workspace
+
+# This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+#Load in packages
+library(stats)
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(reshape2)
+library(psych)
+library(RVAideMemoire)
+library(ez) 
+library(knitr)
+library(scales) 
+
+
+#load the data 
+# Data for sanity check (baseline and first stimulation)
+Physical_base         = read.csv(file='./R_Data/Physical_base.csv',header=TRUE) 
+Physical_npre_after   = read.csv(file='./R_Data/Physical_npre_after.csv',header=TRUE) 
+Perceptual_base       = read.csv(file='./R_Data/Perceptual_base.csv',header=TRUE) 
+Perceptual_npre_after = read.csv(file='./R_Data/Perceptual_npre_after.csv',header=TRUE) 
+
+#Investigating differences in adaptation session between groups
+Perceptual_adapt = read.csv(file='./R_Data/Perceptual_adapt.csv',header=TRUE) 
+Physical_adapt   = read.csv(file='./R_Data/Physical_adapt.csv',header=TRUE) 
+
+#Second stimulation task - difference between groups
+Physical_npo_after   = read.csv(file='./R_Data/Physical_npo_after.csv',header=TRUE) 
+Perceptual_npo_after = read.csv(file='./R_Data/Perceptual_npo_after.csv',header=TRUE) 
+
+#Post test data point - difference between groups
+Physical_post   = read.csv(file='./R_Data/Physical_post.csv',header=TRUE) 
+Perceptual_post = read.csv(file='./R_Data/Perceptual_post.csv',header=TRUE) 
+
+# Difference scores between the symptoms in the first and second naturalistic task
+# this will tell us if the adaptation did anything to affect symptoms. 
+Physical_nat_after_dif   = read.csv(file='./R_Data/Physical_nat_after_dif.csv',header=TRUE)
+Perceptual_nat_after_dif = read.csv(file='./R_Data/Perceptual_nat_after_dif.csv',header=TRUE)
+
+
+################# FUNCTION USED FOR MEAN MEDIAN CREATION
+
+#Function for a mean and median table. Input a data matrix with responses for each lens
+mean_and_median_table = function(data) {
+
+  N = 40
+  Mean_all   = tidy(apply(data,2,mean)) #I need tidy to create the table/data frame thing
+  Median_all = apply(data,2,median)
+  SD_all     = apply(data,2,sd)
+  CI_all     = (1.96 * SD_all) / sqrt(N)
+
+  rename(Mean_all, M = x) %>% #rename mean column to M
+  mutate(Mean_all, Mdn = Median_all, CI_95 = CI_all) %>% #add column with median values named Mdn
+
+  select(names,M,Mdn,CI_95) %>% #for some reason the original x column is still there so I will select out the variables I want
+    
+  kable() #makes the table output in the html
+  
+}
+
+
+################ FUNCTIONS FOR *Paired* WILCOXON TESTS 
+
+# Run Wilcox test, calculate effect size
+# and Tidy the table and rename or add columns for V,Z,N,r
+make_wilcox_table = function(a, b) {
+  
+ this_test = wilcox.test(a, b, paired = TRUE) 
+ # we decided to use wilcox.test, instead of wilcox_test because it seems to be more common
+ # and has continuity correction. The Z values produced in each are slightly different 
+ # likely due to the various corrections
+ 
+    this_test_tidy   = tidy(this_test) 
+    this_test_tidy_v = rename(this_test_tidy, V = statistic)  #renames "statistic" as "V" in the next line
+    #add columns to store the Z,N,and r values.
+    mutate(this_test_tidy_v,
+      V = label_number(accuracy = 0.001)(V),
+      Z = qnorm(p.value/2),
+      N = length(a),
+      r = abs(Z) / sqrt(N) 
+    ) 
+}
+
+
+# Input name of lens conditions you want to compare, use the function above to add 
+# the desired columns and run the wilcox test
+# %>% puts current output as first next input
+run_wilcox_test <- function (len1_str, len2_str, data) { 
+  
+  test_out = make_wilcox_table(data[,len1_str], data[,len2_str])  #run previous function that runs willcox test 
+    
+    mutate(test_out, Comparison = str_c(len1_str, " vs ", len2_str)) %>% #add column with comparison
+    
+    select(Comparison,V,N,Z,r,`Original P Value` = p.value) #keeps only variables mentioned
+}
+
+################ FUNCTIONS FOR Single Sample WILCOXON TESTS again null of 
+
+# Run Wilcox test, calculate effect size
+# and Tidy the table and rename or add columns for V,Z,N,r
+make_wilcox_table_single = function(a, b) {
+  
+ this_test = wilcox.test(a, mu = b[1], paired = FALSE) 
+ # we decided to use wilcox.test, instead of wilcox_test because it seems to be more common
+ # and has continuity correction. The Z values produced in each are slightly different 
+ # likely due to the various corrections
+ 
+ 
+    this_test_tidy   = tidy(this_test) 
+    this_test_tidy_v = rename(this_test_tidy, V = statistic)  #renames "statistic" as "V" in the next line
+    #add columns to store the Z,N,and r values.
+    mutate(this_test_tidy_v,
+      V = label_number(accuracy = 0.001)(V),
+      Z = qnorm(p.value/2),
+      N = length(a),
+      r = abs(Z) / sqrt(N) 
+    ) 
+}
+
+
+# Input name of lens conditions you want to compare, use the function above to add 
+# the desired columns and run the wilcox test
+# %>% puts current output as first next input
+run_wilcox_test_single <- function (len1_str, len2_str, data) { 
+  
+  test_out = make_wilcox_table_single(data[,len1_str], data[,len2_str])  #run previous function that runs willcox test 
+    
+    mutate(test_out, Comparison = str_c(len1_str, " vs ", len2_str)) %>% #add column with comparison
+    
+    select(Comparison,V,N,Z,r,`Original P Value` = p.value) #keeps only variables mentioned
+}
+
+
+
+
+```
+
+# Sanity check
+#### A check that the symptoms for the first two measurements (baseline & physical nat pre after) are the same in both the sessions. In both cases the same lense are worn and there should not be differences between the groups. 00 denotes control and 04 denotes main session
+
+### Physical - Median - time: baseline
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_base) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from one - time: baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04", "D_00","D_04", "N_00", "N_04"),
+  c("one", "one", "one","one", "one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Physical - Paired Wilcox Tests b/w groups - time: baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Physical - Median - time: nat pre after
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_npre_after) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from one - time: nat pre after
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04", "D_00","D_04", "N_00", "N_04"),
+  c("one", "one", "one","one", "one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical - Paired Wilcox Tests b/w groups - time: nat pre after
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+
+### Perceptual - Median - time: baseline
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_base) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests difference from 1 - time: baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00", "Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+  c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups- time: baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Perceptual - Median - time: nat pre after
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_npre_after) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests difference from 1 - time: nat pre after
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+   c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups - time: nat pre after
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+
+
+
+# Adaptation
+#### Investigation of differences in magnitudes of the symptoms reported after the adaptation session with the 00 or 04 ####lenses on. We hypothesize that there should be a difference between groups.
+
+### Physical - Median - time: adapt
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_adapt) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from one - time:adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04", "D_00","D_04", "N_00","N_04"),
+  c( "one","one","one","one","one","one" ),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical - Paired Wilcox Tests b/w groups - time:adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+
+### Perceptual - Median - time: adapt
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_adapt) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests - time: adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+  c( "one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups - time: adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+# Second Nat Task difference between groups
+#### Investigation of differences in magnitudes of the symptoms reported after the second naturalistic task between the 00 and 04 groups. 
+
+### Physical - Median - time: second nat (after task)
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_npo_after) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from one - time: second nat (after task)
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04","D_00","D_04","N_00","N_04"),
+  c( "one","one","one","one","one","one" ),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical - Paired Wilcox Tests b/w groups - time: second nat (after task)
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Perceptual - Median - time: second nat (after task)
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_npo_after) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests difference from one - time: second nat (after task)
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+  c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups - time: second nat (after task)
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+# Post Measurement difference between groups
+#### Investigation of differences in magnitudes of the symptoms reported in the 
+#### post measurement.
+
+### Physical - Median - time: post
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_post) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from one - time: post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04","D_00","D_04","N_00","N_04"),
+  c("one","one","one","one","one","one" ),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical - Paired Wilcox Tests b/w groups - time: post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Median - time:  post
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_post) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests difference from one - time:  post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+  c( "one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one" ),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups - time:  post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+
+# Difference Scores b/w naturalistic tasks 
+#### Did the naturalistic task worse or better after adaptation? These are difference scores
+#### with a positive value meaning the symptoms got worse after adaptation. A negative numer
+#### means that the symptoms got better.
+
+### Physical - Median differnce
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Physical_nat_after_dif[,2:7]) #runs function that creates a table with mean and medians
+
+```
+### Physical - single sample Wilcox Tests difference from zero
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00","H_04","D_00","D_04","N_00","N_04"),
+  c("zero","zero","zero","zero","zero","zero"),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical - Paired Wilcox Tests b/w groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Perceptual - Median differnce
+```{r, warning=FALSE, echo=FALSE}
+
+mean_and_median_table(Perceptual_nat_after_dif[,2:17]) #runs function that creates a table with mean and medians
+
+```
+### Perceptual - single sample Wilcox Tests difference from zero
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
+  c("zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero"),
+  
+  run_wilcox_test_single,
+  
+  data = Perceptual_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Perceptual - Paired Wilcox Tests b/w groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Perceptual_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
