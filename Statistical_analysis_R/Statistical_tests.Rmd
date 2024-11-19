@@ -26,6 +26,8 @@ library(ez)
 library(knitr)
 library(scales) 
 
+# flag indicating whether or not to print a table with means and medians
+show_medians <- FALSE
 
 #load the data 
 # Data for sanity check (baseline and first stimulation)
@@ -50,6 +52,48 @@ Perceptual_post = read.csv(file='./R_Data/Perceptual_post.csv',header=TRUE)
 # this will tell us if the adaptation did anything to affect symptoms. 
 Physical_nat_after_dif   = read.csv(file='./R_Data/Physical_nat_after_dif.csv',header=TRUE)
 Perceptual_nat_after_dif = read.csv(file='./R_Data/Perceptual_nat_after_dif.csv',header=TRUE)
+
+# separate out Neck pain and Eyestrain
+
+# Neck
+
+Neck_base <- Perceptual_base[c("Neck_00", "Neck_04","one")]
+Perceptual_base <- Perceptual_base[ , !(names(Perceptual_base) %in% c("Neck_00", "Neck_04"))]
+
+Neck_npre_after <- Perceptual_npre_after[c("Neck_00", "Neck_04","one")]
+Perceptual_npre_after <- Perceptual_npre_after[ , !(names(Perceptual_npre_after) %in% c("Neck_00", "Neck_04"))]
+
+Neck_adapt <- Perceptual_adapt[c("Neck_00", "Neck_04","one")]
+Perceptual_adapt <- Perceptual_adapt[ , !(names(Perceptual_adapt) %in% c("Neck_00", "Neck_04"))]
+
+Neck_npo_after <- Perceptual_npo_after[c("Neck_00", "Neck_04","one")]
+Perceptual_npo_after <- Perceptual_npo_after[ , !(names(Perceptual_npo_after) %in% c("Neck_00", "Neck_04"))]
+
+Neck_post <- Perceptual_post[c("Neck_00", "Neck_04","one")]
+Perceptual_post <- Perceptual_post[ , !(names(Perceptual_post) %in% c("Neck_00", "Neck_04"))]
+
+Neck_nat_after_dif <- Perceptual_nat_after_dif[c("Neck_00", "Neck_04","zero")]
+Perceptual_nat_after_dif <- Perceptual_nat_after_dif[ , !(names(Perceptual_nat_after_dif) %in% c("Neck_00", "Neck_04"))]
+
+# Eyestrain
+
+Eyestrain_base <- Perceptual_base[c("Eyestrain_00", "Eyestrain_04","one")]
+Perceptual_base <- Perceptual_base[ , !(names(Perceptual_base) %in% c("Eyestrain_00", "Eyestrain_04"))]
+
+Eyestrain_npre_after <- Perceptual_npre_after[c("Eyestrain_00", "Eyestrain_04","one")]
+Perceptual_npre_after <- Perceptual_npre_after[ , !(names(Perceptual_npre_after) %in% c("Eyestrain_00", "Eyestrain_04"))]
+
+Eyestrain_adapt <- Perceptual_adapt[c("Eyestrain_00", "Eyestrain_04","one")]
+Perceptual_adapt <- Perceptual_adapt[ , !(names(Perceptual_adapt) %in% c("Eyestrain_00", "Eyestrain_04"))]
+
+Eyestrain_npo_after <- Perceptual_npo_after[c("Eyestrain_00", "Eyestrain_04","one")]
+Perceptual_npo_after <- Perceptual_npo_after[ , !(names(Perceptual_npo_after) %in% c("Eyestrain_00", "Eyestrain_04"))]
+
+Eyestrain_post <- Perceptual_post[c("Eyestrain_00", "Eyestrain_04","one")]
+Perceptual_post <- Perceptual_post[ , !(names(Perceptual_post) %in% c("Eyestrain_00", "Eyestrain_04"))]
+
+Eyestrain_nat_after_dif <- Perceptual_nat_after_dif[c("Eyestrain_00", "Eyestrain_04","zero")]
+Perceptual_nat_after_dif <- Perceptual_nat_after_dif[ , !(names(Perceptual_nat_after_dif) %in% c("Eyestrain_00", "Eyestrain_04"))]
 
 
 ################# FUNCTION USED FOR MEAN MEDIAN CREATION
@@ -108,7 +152,7 @@ run_wilcox_test <- function (len1_str, len2_str, data) {
     select(Comparison,V,N,Z,r,`Original P Value` = p.value) #keeps only variables mentioned
 }
 
-################ FUNCTIONS FOR Single Sample WILCOXON TESTS again null of 
+################ FUNCTIONS FOR Single Sample WILCOXON TESTS again null
 
 # Run Wilcox test, calculate effect size
 # and Tidy the table and rename or add columns for V,Z,N,r
@@ -149,16 +193,18 @@ run_wilcox_test_single <- function (len1_str, len2_str, data) {
 
 ```
 
-# Sanity check
-#### A check that the symptoms for the first two measurements (baseline & physical nat pre after) are the same in both the sessions. In both cases the same lense are worn and there should not be differences between the groups. 00 denotes control and 04 denotes main session
+# Baseline 
 
 ### Physical - Median - time: baseline
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Physical_base) #runs function that creates a table with mean and medians
+}
 
 ```
-### Physical - single sample Wilcox Tests difference from one - time: baseline
+
+
+### Physical -  baseline
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -179,7 +225,7 @@ map2_df(
 
 ```
 
-### Physical - Paired Wilcox Tests b/w groups - time: baseline
+### Physical b/w groups -  baseline
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -199,68 +245,21 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-
-### Physical - Median - time: nat pre after
-```{r, warning=FALSE, echo=FALSE}
-
-mean_and_median_table(Physical_npre_after) #runs function that creates a table with mean and medians
-
-```
-### Physical - single sample Wilcox Tests difference from one - time: nat pre after
-```{r,warning=FALSE, echo=FALSE}
-
-# A routine to iterate over pairs of tests
-map2_df(
-  c("H_00","H_04", "D_00","D_04", "N_00", "N_04"),
-  c("one", "one", "one","one", "one", "one"),
-  
-  run_wilcox_test_single,
-  
-  data = Physical_npre_after
-) %>% #%>% takes this output and puts it into next 
-  
-  #Correct p values. this is performed after because we need all of the p values in 
-  # one matrix to perform the correction
-  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
-  
-  kable() #makes table come out as html
-
-```
-### Physical - Paired Wilcox Tests b/w groups - time: nat pre after
-```{r,warning=FALSE, echo=FALSE}
-
-# A routine to iterate over pairs of tests
-map2_df(
-  c("H_00", "D_00", "N_00"),
-  c("H_04", "D_04", "N_04"),
-  
-  run_wilcox_test,
-  
-  data = Physical_npre_after
-) %>% #%>% takes this output and puts it into next 
-  
-  #Correct p values. this is performed after because we need all of the p values in 
-  # one matrix to perform the correction
-  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
-  
-  kable() #makes table come out as html
-
-```
-
 
 ### Perceptual - Median - time: baseline
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Perceptual_base) #runs function that creates a table with mean and medians
+}
 
 ```
-### Perceptual - single sample Wilcox Tests difference from 1 - time: baseline
+### Perceptual -  baseline
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00", "Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-  c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00", "Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+  c("one","one","one","one","one","one","one","one","one","one","one","one"),
   
   run_wilcox_test_single,
   
@@ -274,13 +273,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups- time: baseline
+### Perceptual b/w groups -  baseline
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -295,19 +294,68 @@ map2_df(
 
 ```
 
-### Perceptual - Median - time: nat pre after
+# First Stimulation
+
+### Physical - Median - time: first stimulation
 ```{r, warning=FALSE, echo=FALSE}
-
-mean_and_median_table(Perceptual_npre_after) #runs function that creates a table with mean and medians
-
+if (show_medians) {
+mean_and_median_table(Physical_npre_after) #runs function that creates a table with mean and medians
+}
 ```
-### Perceptual - single sample Wilcox Tests difference from 1 - time: nat pre after
+### Physical - first stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-   c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  c("H_00","H_04", "D_00","D_04", "N_00", "N_04"),
+  c("one", "one", "one","one", "one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Physical_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Physical  b/w groups - first stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("H_00", "D_00", "N_00"),
+  c("H_04", "D_04", "N_04"),
+  
+  run_wilcox_test,
+  
+  data = Physical_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Perceptual - Median - time: first stimulation
+```{r, warning=FALSE, echo=FALSE}
+if (show_medians) {
+mean_and_median_table(Perceptual_npre_after) #runs function that creates a table with mean and medians
+}
+```
+### Perceptual - first stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+   c("one","one","one","one","one","one","one","one","one","one","one","one"),
   
   run_wilcox_test_single,
   
@@ -321,13 +369,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups - time: nat pre after
+### Perceptual b/w groups - first stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -341,20 +389,17 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-
-
 
 
 # Adaptation
-#### Investigation of differences in magnitudes of the symptoms reported after the adaptation session with the 00 or 04 ####lenses on. We hypothesize that there should be a difference between groups.
 
 ### Physical - Median - time: adapt
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Physical_adapt) #runs function that creates a table with mean and medians
-
+}
 ```
-### Physical - single sample Wilcox Tests difference from one - time:adapt
+### Physical - adapt
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -374,7 +419,7 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Physical - Paired Wilcox Tests b/w groups - time:adapt
+### Physical  b/w groups - adapt
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -395,20 +440,19 @@ map2_df(
 
 ```
 
-
 ### Perceptual - Median - time: adapt
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Perceptual_adapt) #runs function that creates a table with mean and medians
-
+}
 ```
-### Perceptual - single sample Wilcox Tests - time: adapt
+### Perceptual -  adapt
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-  c( "one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+  c( "one","one","one","one","one","one","one","one","one","one","one","one"),
   
   run_wilcox_test_single,
   
@@ -422,13 +466,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups - time: adapt
+### Perceptual  b/w groups -  adapt
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -443,16 +487,15 @@ map2_df(
 
 ```
 
-# Second Nat Task difference between groups
-#### Investigation of differences in magnitudes of the symptoms reported after the second naturalistic task between the 00 and 04 groups. 
+# Second Stimulation
 
-### Physical - Median - time: second nat (after task)
+### Physical - Median - time: second stimulation
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Physical_npo_after) #runs function that creates a table with mean and medians
-
+}
 ```
-### Physical - single sample Wilcox Tests difference from one - time: second nat (after task)
+### Physical - second stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -472,7 +515,7 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Physical - Paired Wilcox Tests b/w groups - time: second nat (after task)
+### Physical b/w groups - second stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -493,19 +536,19 @@ map2_df(
 
 ```
 
-### Perceptual - Median - time: second nat (after task)
+### Perceptual - Median - time: second stimulation
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Perceptual_npo_after) #runs function that creates a table with mean and medians
-
+}
 ```
-### Perceptual - single sample Wilcox Tests difference from one - time: second nat (after task)
+### Perceptual - second stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-  c("one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one"),
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+  c("one","one","one","one","one","one","one","one","one","one","one","one"),
   
   run_wilcox_test_single,
   
@@ -519,13 +562,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups - time: second nat (after task)
+### Perceptual  b/w groups - second stimulation
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -540,17 +583,15 @@ map2_df(
 
 ```
 
-# Post Measurement difference between groups
-#### Investigation of differences in magnitudes of the symptoms reported in the 
-#### post measurement.
+# Post Test
 
 ### Physical - Median - time: post
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Physical_post) #runs function that creates a table with mean and medians
-
+}
 ```
-### Physical - single sample Wilcox Tests difference from one - time: post
+### Physical - post
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -570,7 +611,7 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Physical - Paired Wilcox Tests b/w groups - time: post
+### Physical b/w groups -  post
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -592,17 +633,17 @@ map2_df(
 ```
 ### Perceptual - Median - time:  post
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Perceptual_post) #runs function that creates a table with mean and medians
-
+}
 ```
-### Perceptual - single sample Wilcox Tests difference from one - time:  post
+### Perceptual -  post
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-  c( "one","one","one","one","one","one","one","one","one","one","one","one","one","one","one","one" ),
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+  c( "one","one","one","one","one","one","one","one","one","one","one","one"),
   
   run_wilcox_test_single,
   
@@ -616,13 +657,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups - time:  post
+### Perceptual b/w groups - post
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -639,17 +680,14 @@ map2_df(
 
 
 # Difference Scores b/w naturalistic tasks 
-#### Did the naturalistic task worse or better after adaptation? These are difference scores
-#### with a positive value meaning the symptoms got worse after adaptation. A negative numer
-#### means that the symptoms got better.
 
 ### Physical - Median differnce
 ```{r, warning=FALSE, echo=FALSE}
-
+if (show_medians) {
 mean_and_median_table(Physical_nat_after_dif[,2:7]) #runs function that creates a table with mean and medians
-
+}
 ```
-### Physical - single sample Wilcox Tests difference from zero
+### Physical - stimulation difference
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -669,7 +707,7 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Physical - Paired Wilcox Tests b/w groups
+### Physical  b/w groups - stimulation difference
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
@@ -692,17 +730,17 @@ map2_df(
 
 ### Perceptual - Median differnce
 ```{r, warning=FALSE, echo=FALSE}
-
-mean_and_median_table(Perceptual_nat_after_dif[,2:17]) #runs function that creates a table with mean and medians
-
+if (show_medians) {
+mean_and_median_table(Perceptual_nat_after_dif[,2:13]) #runs function that creates a table with mean and medians
+}
 ```
-### Perceptual - single sample Wilcox Tests difference from zero
+### Perceptual - stimulation difference
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04","Eyestrain_00","Eyestrain_04","Neck_00","Neck_04"),
-  c("zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero"),
+  c("Interact_00","Interact_04", "Shape_00","Shape_04", "Location_00","Location_04","Swim_00","Swim_04","Blur_00","Blur_04","Double_00","Double_04"),
+  c("zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero","zero"),
   
   run_wilcox_test_single,
   
@@ -716,13 +754,13 @@ map2_df(
   kable() #makes table come out as html
 
 ```
-### Perceptual - Paired Wilcox Tests b/w groups
+### Perceptual b/w groups - stimulation difference
 ```{r,warning=FALSE, echo=FALSE}
 
 # A routine to iterate over pairs of tests
 map2_df(
-  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00","Eyestrain_00","Neck_00"),
-  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04","Eyestrain_04","Neck_04"),
+  c("Interact_00", "Shape_00", "Location_00","Swim_00","Blur_00","Double_00"),
+  c("Interact_04", "Shape_04", "Location_04","Swim_04","Blur_04","Double_04"),
   
   run_wilcox_test,
   
@@ -737,3 +775,515 @@ map2_df(
 
 ```
 
+
+
+
+# Eyestrain
+
+### Baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Baseline between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### First stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### First stimulation between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Adapt between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Second stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Second stimulation between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Post between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Stimulation difference
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00","Eyestrain_04"),
+  c("zero","zero"),
+  
+  run_wilcox_test_single,
+  
+  data = Eyestrain_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Stimulation difference between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Eyestrain_00"),
+  c("Eyestrain_04"),
+  
+  run_wilcox_test,
+  
+  data = Eyestrain_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+
+
+
+
+# Control question - stats not in paper
+
+### Baseline
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Baseline between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_base
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### First stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### First stimulation between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_npre_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Adapt
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Adapt between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_adapt
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Second stimulation
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Second stimulation between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_npo_after
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("one", "one"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Post
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_post
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+
+### Stimulation difference
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00","Neck_04"),
+  c("zero","zero"),
+  
+  run_wilcox_test_single,
+  
+  data = Neck_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
+### Stimulation difference between groups
+```{r,warning=FALSE, echo=FALSE}
+
+# A routine to iterate over pairs of tests
+map2_df(
+  c("Neck_00"),
+  c("Neck_04"),
+  
+  run_wilcox_test,
+  
+  data = Neck_nat_after_dif
+) %>% #%>% takes this output and puts it into next 
+  
+  #Correct p values. this is performed after because we need all of the p values in 
+  # one matrix to perform the correction
+  mutate( `Corrected P Value` = p.adjust(`Original P Value`, method = "fdr") ) %>% #adding a column for corrected p value
+  
+  kable() #makes table come out as html
+
+```
